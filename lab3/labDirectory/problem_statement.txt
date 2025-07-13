@@ -1,0 +1,128 @@
+In this activity, you will create Terraform configuration files to provision an Amazon EKS cluster with associated networking components, security groups, and node groups. The "iam_role.tf" file is already provided to you. Your task is to write the remaining Terraform files to achieve the infrastructure described below. Follow the steps carefully to ensure your final submission matches the expected solution.
+
+Steps to Complete:
+
+Step 0: AWS Configure
+ - Create an IAM user using the policy present in "iam_terraform_policy.json"
+ - Configure AWS credentials of the created user via aws configure(Enter your Access Key ID and your Secret Access Key when prompted)
+
+Step 1: Set Up the VPC
+Update the vpc.tf file to define an AWS VPC with the following properties:
+- CIDR block: 10.0.0.0/16
+
+Step 2: Create Public Subnets
+Update the subnet.tf file to define two public subnets in the VPC:
+1. Subnet 1:
+   - CIDR: 10.0.1.0/24
+   - Availability Zone: ap-southeast-1a
+   - Enable automatic public IP assignment for instances launched here.
+2. Subnet 2:
+   - CIDR: 10.0.2.0/24
+   - Availability Zone: ap-southeast-1b
+   - Enable automatic public IP assignment for instances launched here.
+
+Step 3: Configure an Internet Gateway
+Update the internetgw.tf file to define an internet gateway attached to the VPC.
+
+Step 4: Set Up Routing
+Update the route.tf file to:
+1. Define a route table for the VPC with a default route (0.0.0.0/0) pointing to the internet gateway.
+2. Associate both public subnets with this route table.
+
+Step 5: Define Security Groups
+Update the sg.tf file to define a security group with:
+- Name: allow_http
+- Inbound rule: Allow HTTP (port 80) from 0.0.0.0/0.
+- Outbound rule: Allow all traffic to 0.0.0.0/0.
+- Tag: Name = "allow_http"
+
+Step 6: Configure the AWS Provider
+Update the provider.tf file to specify the AWS provider with:
+- Region: ap-southeast-1
+
+Step 7: Create the EKS Cluster
+Update the eks_cluster.tf file to:
+1. Define an EKS cluster named pc-eks using the IAM role ARN aws_iam_role.master (already provided in iam_role.tf).
+2. Attach the cluster to the public subnets created earlier.
+3. Add the following dependencies to ensure the cluster waits for the required IAM policies to be attached:
+   - AmazonEKSClusterPolicy
+   - AmazonEKSServicePolicy
+   - AmazonEKSVPCResourceController
+
+Step 8: Set Up the EKS Node Group
+Update the eks_node_group.tf file to:
+1. Define a node group named pc-node-group with:
+   - Instance type: t2.small
+   - Node role ARN: Use the ARN of aws_iam_role.worker.
+   - Disk size: 20GB (recommended).
+   - Capacity type: ON_DEMAND (recommended).
+   - Desired capacity: 2 nodes.
+   - Minimum capacity: 1 node.
+   - Maximum capacity: 3 nodes.
+   - Subnets: Use the two public subnets.
+   - Labels: env = "dev".
+2. Ensure the node group depends on the following worker node IAM policies (already provided in iam_role.tf):
+   - AmazonEKSWorkerNodePolicy
+   - AmazonEKS_CNI_Policy
+   - AmazonEC2ContainerRegistryReadOnly
+
+Step 9: Set Up a Kubectl Server
+In the same eks_node_group.tf file, define an EC2 instance to act as a kubectl server:
+- AMI: ami-063e1495af50e6fd5 (pre-configured with Kubernetes tools).
+- Instance type: t2.micro.
+- Subnet: Deploy it in the first public subnet (public-1).
+- Security group: Attach the allow_http security group.
+
+Step 10: Define Outputs
+Create an outputs.tf file to output the following details:
+1. VPC Details:
+   - Output the VPC ID.
+2. Subnet Details:
+   - Output the IDs of the two public subnets.
+3. Internet Gateway Details:
+   - Output the ID of the internet gateway.
+4. Route Table Details:
+   - Output the ID of the route table.
+5. Security Group Details:
+   - Output the ID of the security group.
+6. EKS Cluster Details:
+   - Output the ID and endpoint of the EKS cluster.
+7. EKS Node Group Details:
+   - Output the ID of the EKS node group.
+8. Kubectl Server Details:
+   - Output the instance ID of the kubectl server.
+
+Validation Requirements:
+1. Ensure dependencies (e.g., depends_on) are correctly defined to avoid race conditions.
+2. Use the existing iam_role.tf file; do not modify it.
+3. Ensure all required outputs are defined in the outputs.tf file.
+
+Steps to Complete the activity: 
+a. Initialize Terraform: Run the command "terraform init" inside labDirectory to initialize Terraform.
+b. Apply the Terraform deployment: Run "terraform apply" and confirm the action when prompted.
+
+Post-Deployment Steps:
+To use EKS functionality, users will need to:
+1. Run the following command to update the kubeconfig:
+   aws eks update-kubeconfig --region ap-southeast-1 --name pc-eks
+2. Use kubectl to interact with the cluster.
+
+After successfully completing the activity, you should be able to run the following commands and see the expected output:
+
+root@9c84944ea560:/home/labDirectory# aws eks update-kubeconfig --region ap-southeast-1 --name pc-eks
+Sample Output:
+Added new context arn:aws:eks:ap-southeast-1:295848233874:cluster/pc-eks to /root/.kube/config
+
+root@9c84944ea560:/home/labDirectory# kubectl get nodes
+Sample Output:
+NAME                                            STATUS   ROLES    AGE     VERSION
+ip-10-0-1-65.ap-southeast-1.compute.internal    Ready    <none>   3h17m   v1.31.5-eks-5d632ec
+ip-10-0-2-195.ap-southeast-1.compute.internal   Ready    <none>   3h17m   v1.31.5-eks-5d632ec
+
+Evaluation:
+When your cluster is running fine then click on Evaluate.
+
+Cleanup:
+To avoid incurring charges, after evaluating the activity:
+
+Run "terraform destroy" in labDirectory and confirm the action.

@@ -1,0 +1,30 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Sid1",
+            "Effect": "Allow",
+            "Action": [
+                "iam:*",
+                "cloudformation:*",
+                "ec2:*",
+                "ce:*",
+                "s3:*",
+                "elasticloadbalancing:*",
+                "lambda:*",
+                "tag:GetResources",
+                "logs:*",
+                "kms:*",
+                "ssm:StartSession",
+                "access-analyzer:ValidatePolicy",
+                "cloudwatch:*",
+                "cloudtrail:*",
+                "config:*",
+                "eks:*",
+                "ecr:*",
+                "ecs:*"
+            ],
+            "Resource": "*"
+        }
+    ]
+}

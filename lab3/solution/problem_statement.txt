@@ -1,0 +1,94 @@
+Create an Amazon EKS Cluster Using Terraform
+
+In this lab, you will create Terraform configuration files to provision an Amazon EKS cluster with associated networking components, security groups, and node groups. The "iam_role.tf" file is already provided to you. Your task is to write the remaining Terraform files to achieve the infrastructure described below. Follow the steps carefully to ensure your final submission matches the expected solution.
+
+
+**Step 1: Set up the VPC**  
+Update **vpc.tf** file to define an AWS VPC with the following properties:  
+- CIDR block: `10.0.0.0/16`  
+- Tag the VPC with `Name = "PC-VPC"`.
+
+
+**Step 2: Create Public Subnets**  
+Update **subnet.tf** file to define two public subnets in the VPC:  
+1. **Subnet 1**:  
+   - CIDR: `10.0.1.0/24`  
+   - Availability Zone: `ap-southeast-1a`  
+   - Enable automatic public IP assignment for instances launched here.  
+   - Tag: `Name = "public-sub-1"`.  
+
+2. **Subnet 2**:  
+   - CIDR: `10.0.2.0/24`  
+   - Availability Zone: `ap-southeast-1b`  
+   - Enable automatic public IP assignment for instances launched here.  
+   - Tag: `Name = "public-sub-2"`.  
+
+---
+
+**Step 3: Configure an Internet Gateway**  
+Update **internetgw.tf** file to define an internet gateway attached to the VPC. Tag it with `Name = "main"`.
+
+---
+
+**Step 4: Set Up Routing**  
+Update **route.tf** file to:  
+1. Define a route table for the VPC with a default route (`0.0.0.0/0`) pointing to the internet gateway. Tag it with `Name = "MyRoute"`.  
+2. Associate both public subnets with this route table.  
+
+---
+
+**Step 5: Define Security Groups**  
+Update **sg.tf** file to define a security group with:
+- Name: `allow_http`   
+- Inbound rule: Allow HTTP (port 80) from `0.0.0.0/0`.  
+- Outbound rule: Allow all traffic to `0.0.0.0/0`.  
+- Tag: `Name = "allow_http"`
+
+---
+
+**Step 6: Configure the AWS Provider**  
+Update **provider.tf** file to specify the AWS provider with region `ap-southeast-1` and IAM user credentials.
+
+---
+
+**Step 7: Create the EKS Cluster**  
+Update **eks_cluster.tf** file to:  
+1. Define an EKS cluster named `pc-eks` using the IAM role arn `aws_iam_role.master` (already provided in **iam_role.tf**).  
+2. Attach the cluster to the **public subnets** created earlier.  
+3. Add following dependencies to ensure the cluster waits for the required IAM policies to be attached:
+a) AmazonEKSClusterPolicy
+b) AmazonEKSServicePolicy
+c) AmazonEKSVPCResourceController
+
+---
+
+**Step 8: Set Up the EKS Node Group**  
+Update **eks_node_group.tf** file to:  
+1. Define a node group named `pc-node-group` with:  
+   - Instance type: `t2.small`  
+   - Use arn of aws_iam_role.worker as node role arn
+   - Disk size: 20GB (recommended) 
+   - Capacity type should be "ON_DEMAND" (recommended)
+   - Desired capacity: 2 nodes, min: 1, max: 3.  
+   - Subnets: Use the two public subnets.  
+   - Labels: `env = "dev"`.  
+2. Ensure the node group depends on the following worker node IAM policies (already provided in iam_role.tf):
+a) AmazonEKSWorkerNodePolicy,
+b) AmazonEKS_CNI_Policy,
+c) AmazonEC2ContainerRegistryReadOnly
+
+---
+
+**Step 9: Set up a Kubectl Server**  
+In the same **eks_node_group.tf** file, define an EC2 instance to act as a kubectl server:  
+- AMI: `ami-063e1495af50e6fd5` (pre-configured with Kubernetes tools).  
+- Instance type: `t2.micro`.  
+- Deploy it in the first public subnet (`public-1`).  
+- Attach the `allow_http` security group.
+- Tag: `Name = "kubectl"`.  
+
+---
+
+**Validation Requirements:**   
+1. Ensure dependencies (e.g., `depends_on`) are correctly defined to avoid race conditions.  
+2. Use the existing **iam_role.tf** file; do not modify it.
